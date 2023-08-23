@@ -6,6 +6,13 @@
   reg: VXEV1ZKXZN.*
   max_elec_consumption: 70
 - !ElecModel
+  name: e-berlingo 2022+
+  battery_power: 46
+  fuel_capacity: 0
+  abrp_name: opel:comboe:22:50:citroen
+  reg: VR7EZZKXZP.*
+  max_elec_consumption: 70
+- !ElecModel
   name: e-jumpy
   battery_power: 68
   fuel_capacity: 0
@@ -89,6 +96,13 @@
   abrp_name: opel:comboe:22:50:peugeot
   reg: VR3EZZKXZ.*
   max_elec_consumption: 70
+- !ElecModel
+  name: e-Berlingo
+  battery_power: 50
+  fuel_capacity: 0
+  abrp_name: citroen:berlingoe:11:100:peugeot
+  reg: VR7EZZKXZP.*
+  max_elec_consumption: 100
 - !ElecModel
   name: ION
   battery_power: 14.5
@@ -324,7 +338,7 @@
   battery_power: 12.4
   fuel_capacity: 40
   abrp_name:
-  reg: VR1F4DGYTM.*
+  reg: VR1F4DGYT.*
   max_elec_consumption: 70
   max_fuel_consumption: 30
 - !CarModel
@@ -335,6 +349,14 @@
   reg: VR3FPHNSTN.*
   max_elec_consumption: 70
   max_fuel_consumption: 30   
+- !CarModel
+  name: C5X
+  battery_power: 12.4
+  fuel_capacity: 40
+  abrp_name:
+  reg: VR7NDDGYPN.*
+  max_elec_consumption: 70
+  max_fuel_consumption: 30
 - !CarModel
   name: SUV 3008 Hybrid 300
   battery_power: 13.2
@@ -357,5 +379,13 @@
   fuel_capacity: 0
   abrp_name: opel:comboe:22:50
   reg: W0VEZZKXZN.*
-  max_elec_consumption: 45
+  max_elec_consumption: 45 
+- !CarModel
+  name: C5X hybrid
+  battery_power: 12.4
+  fuel_capacity: 40
+  abrp_name:
+  reg: VR7NDDGYPN.*
+  max_elec_consumption: 70
+  max_fuel_consumption: 30
 
