@@ -5,6 +5,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import pytz
 import reverse_geocode
 from dateutil.tz import tzutc
 from greenery.lego import parse, charclass
@@ -30,19 +31,10 @@ from psa_car_controller.psacc.repository.config_repository import ConfigReposito
 from psa_car_controller.psacc.repository.db import Database
 from psa_car_controller.psacc.repository.trips import Trips
 from psa_car_controller.psacc.utils.utils import get_temp
-from tests.data.car_status import FUEL_CAR_STATUS, ELECTRIC_CAR_STATUS
+from tests.data.car_status import FUEL_CAR_STATUS, ELECTRIC_CAR_STATUS, ELECTRIC_CAR_STATUS_V2
 from tests.utils import DATA_DIR, record_position, latitude, longitude, date0, date1, date2, date3, record_charging, \
-    vehicule_list, get_new_test_db, get_date, date4
+    vehicule_list, get_new_test_db, get_date, date4, compare_dict
 from psa_car_controller.web.figures import get_figures, get_battery_curve_fig, get_altitude_fig
-from deepdiff import DeepDiff
-
-
-def compare_dict(result, expected):
-    diff = DeepDiff(expected, result)
-    if diff != {}:
-        raise AssertionError(str(diff))
-    return True
-
 
 dummy_value = 0
 
@@ -72,13 +64,18 @@ class TestUnit(unittest.TestCase):
 
     def test_mypsacc(self):
         if self.test_online:
-            myp = PSAClient.load_config("config.json")
-            myp.refresh_token()
+            myp = PSAClient.load_config("./config/config.json")
+            myp.manager.refresh_token_now()
+            myp.save_config()
             myp.get_vehicles()
             car = myp.vehicles_list[0]
             myp.abrp.abrp_enable_vin.add(car.vin)
             myp.get_vehicle_info(myp.vehicles_list[0].vin)
             myp.abrp.call(car, 22.1)
+
+    def test_open_weather_api(self):
+        if self.test_online:
+            myp = PSAClient.load_config("./config/config.json")
             assert isinstance(get_temp(str(latitude), str(longitude), myp.weather_api), float)
 
     def test_car_model(self):
@@ -99,13 +96,12 @@ class TestUnit(unittest.TestCase):
 
     def test_c02_signal(self):
         if self.test_online:
-            key = "d186c74bfbcd1da8"
-            Ecomix.co2_signal_key = key
+            PSAClient.load_config("./config/config.json")
             def_country = "FR"
             Ecomix.get_data_from_co2_signal(latitude, longitude, def_country)
             res = Ecomix.get_co2_from_signal_cache(datetime.utcnow().replace(tzinfo=UTC) - timedelta(minutes=5),
-                                                   datetime.now(), def_country)
-            assert isinstance(res, float)
+                                                   datetime.utcnow().replace(tzinfo=UTC), def_country)
+            self.assertIsInstance(res, (int, float))
 
     def test_charge_control(self):
         charge_control = ChargeControls()
@@ -164,6 +160,37 @@ class TestUnit(unittest.TestCase):
                            True)
         self.assertEqual(db_record_position_arg, expected_result)
 
+    @patch("psa_car_controller.psacc.repository.db.Database.record_battery_soh")
+    @patch("psa_car_controller.psacc.repository.db.Database.record_position")
+    def test_electric_record_info_v2(self, mock_db, moock_soh):
+        api = ApiClient()
+        status: psa.connected_car_api.models.status.Status = api._ApiClient__deserialize(
+            ELECTRIC_CAR_STATUS_V2, "Status")
+        get_new_test_db()
+        car = self.vehicule_list[0]
+        car.status = status
+        myp = PSAClient.load_config(DATA_DIR + "config.json")
+        myp.record_info(car)
+        db_record_position_arg = mock_db.call_args_list[0][0]
+        expected_result = (None, 'VR3UHZKX', 3196.5, 47.274, -1.59008, 30,
+                           datetime(2022, 3, 26, 11, 2, 54, tzinfo=tzutc()),
+                           59.0,
+                           None,
+                           True)
+        self.assertEqual(db_record_position_arg, expected_result)
+        self.assertEqual(
+            ('VR3UHZKX',
+             datetime(
+                 2022,
+                 3,
+                 26,
+                 11,
+                 2,
+                 54,
+                 tzinfo=tzutc()),
+             90),
+            moock_soh.call_args_list[0][0])
+
     def test_record_position_charging(self):
         get_new_test_db()
         config_repository.CONFIG_FILENAME = DATA_DIR + "config.ini"
@@ -189,7 +216,18 @@ class TestUnit(unittest.TestCase):
         start_level = 40
         end_level = 85
         mileage = 123456789.1
-        Charging.record_charging(car, "InProgress", date0, start_level, latitude, longitude, None, "slow", 20, 60, mileage)
+        Charging.record_charging(
+            car,
+            "InProgress",
+            date0,
+            start_level,
+            latitude,
+            longitude,
+            None,
+            "slow",
+            20,
+            60,
+            mileage)
         Charging.record_charging(car, "InProgress", date1, 70, latitude, longitude, "FR", "slow", 20, 60, mileage)
         Charging.record_charging(car, "InProgress", date1, 70, latitude, longitude, "FR", "slow", 20, 60, mileage)
         Charging.record_charging(car, "InProgress", date2, 80, latitude, longitude, "FR", "slow", 20, 60, mileage)
