@@ -135,6 +135,14 @@
   max_elec_consumption: 70
   max_fuel_consumption: 30
 - !CarModel
+  name: '308SW 2018'
+  battery_power: 0
+  fuel_capacity: 46
+  abrp_name:
+  reg: VF3LCBHZHJ.*
+  max_elec_consumption: 70
+  max_fuel_consumption: 30
+- !CarModel
   name: '208'
   battery_power: 0
   fuel_capacity: 44
@@ -164,6 +172,14 @@
   fuel_capacity: 44
   abrp_name:
   reg: VF3CU9HP.*
+  max_elec_consumption: 70
+  max_fuel_consumption: 30
+- !CarModel
+  name: '2008 MK1'
+  battery_power: 0
+  fuel_capacity: 44
+  abrp_name:
+  reg: VF3CUBHY6F.*
   max_elec_consumption: 70
   max_fuel_consumption: 30
 - !CarModel
@@ -459,3 +475,29 @@
   abrp_name:
   reg: W0VEAZKXZP.*
   max_elec_consumption: 46
+- !CarModel
+  name: C4 SpaceTourer Shine Edition (2018)
+  battery_power: 0
+  fuel_capacity: 55
+  abrp_name:
+  reg: VF73DHNSPJ.*
+- !CarModel
+  name: C3 Feel Edition (2016)
+  battery_power: 0
+  fuel_capacity: 45
+  abrp_name:
+  reg: VF7SCHMZ6F.*
+- !CarModel
+  name: C5 Aircross Hybrid E Series
+  battery_power: 13.2
+  fuel_capacity: 53
+  abrp_name:
+  reg: VR7ARHPYEP.*
+- !CarModel
+  name: Peugeot Rifter
+  battery_power: 0
+  fuel_capacity: 50
+  abrp_name:
+  reg: VR3ECYHYCK.*
+  max_elec_consumption: 0
+  max_fuel_consumption: 30
