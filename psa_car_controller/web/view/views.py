@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 from typing import List
 from urllib.parse import parse_qs, urlparse
@@ -7,13 +6,12 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from dash.dependencies import Output, Input, State
 from dash.exceptions import PreventUpdate
-from flask import jsonify, request, Response as FlaskResponse
 import time
+from flask import request
 
 from psa_car_controller.common.mylogger import CustomLogger
 from psa_car_controller.psacc.application.car_controller import PSACarController
 from psa_car_controller.psacc.model.car import Cars, Car
-from psa_car_controller.common.utils import RateLimitException
 from psa_car_controller.psacc.model.charge import Charge
 
 from psa_car_controller.psacc.repository.trips import Trips
@@ -21,7 +19,7 @@ from psa_car_controller.psacc.repository.trips import Trips
 from psa_car_controller.psacc.application.charging import Charging
 from psa_car_controller.web import figures
 
-from psa_car_controller.web.app import app, dash_app
+from psa_car_controller.web.app import dash_app
 from psa_car_controller.psacc.repository.db import Database
 from psa_car_controller.web.tools.utils import diff_dashtable, unix_time_millis, get_marks_from_start_end, create_card
 from psa_car_controller.web.view.config_views import log_layout, config_layout
@@ -31,6 +29,8 @@ from psa_car_controller.web.tools.figurefilter import FigureFilter
 from psa_car_controller.web.view.control import get_control_tabs
 
 from psa_car_controller import __version__
+from psa_car_controller.web.view import api  # pylint: disable=unused-import
+
 logger = CustomLogger.getLogger(__name__)
 
 EMPTY_DIV = "empty-div"
@@ -48,20 +48,20 @@ def get_default_car() -> Car:
 
 def add_header(el):
     version = "v" + __version__
-    github_url= "https://github.com/flobz/psa_car_controller/releases/tag/"+version
+    github_url = "https://github.com/flobz/psa_car_controller/releases/tag/" + version
     dbc_version = dbc.Button(html.I(version, className="m-1"),
                              size='sm',
-                             color="secondary", 
+                             color="secondary",
                              className="me-1 bi bi-github",
-                             external_link =True, href=github_url)
+                             external_link=True, href=github_url)
     return dbc.Row([dbc.Col(dcc.Link(html.H1('My car info'), href=dash_app.requests_pathname_external_prefix,
                                      style={"TextDecoration": "none"})),
                     dbc.Col(html.Div([dbc_version,
-                                    dcc.Link(html.Img(src="assets/images/settings.svg", width="30veh"),
-                                     href=dash_app.requests_pathname_external_prefix + "config",
-                                     className="float-end")],
+                                      dcc.Link(html.Img(src="assets/images/settings.svg", width="30veh"),
+                                               href=dash_app.requests_pathname_external_prefix + "config",
+                                               className="float-end")],
                                      className="d-grid gap-2 d-md-flex justify-content-md-end",))],
-                                     className='align-items-center'), el
+                   className='align-items-center'), el
 
 
 @dash_app.callback(Output('page-content', 'children'),
@@ -104,7 +104,7 @@ def create_callback():  # noqa: MC0001
             for changed_line in diff_data:
                 if changed_line['column_name'] == 'price':
                     conn = Database.get_db()
-                    charge = Charge(datetime.utcfromtimestamp(changed_line['start_at']/1000))
+                    charge = Charge(datetime.utcfromtimestamp(changed_line['start_at'] / 1000))
                     charge.price = changed_line['current_value']
                     charge.vin = get_default_car().vin
                     if not Database.set_chargings_price(conn, charge):
@@ -139,11 +139,11 @@ def create_callback():  # noqa: MC0001
             return "", False
 
         @dash_app.callback(Output("loading-output-trips", "children"), Input("export-trips-table", "n_clicks"))
-        def export_trips_loading_animation(n_clicks): # pylint: disable=unused-argument
+        def export_trips_loading_animation(n_clicks):  # pylint: disable=unused-argument
             time.sleep(3)
 
         @dash_app.callback(Output("loading-output-battery", "children"), Input("export-battery-table", "n_clicks"))
-        def export_batt_loading_animation(n_clicks): # pylint: disable=unused-argument
+        def export_batt_loading_animation(n_clicks):  # pylint: disable=unused-argument
             time.sleep(3)
         # Emulate click on original Export datatables button, since original button is hard to modify
         dash_app.clientside_callback(
@@ -174,147 +174,6 @@ def create_callback():  # noqa: MC0001
         CALLBACK_CREATED = True
 
 
-@app.route('/get_vehicles')
-def get_vehicules():
-    response = app.response_class(
-        response=json.dumps(APP.myp.get_vehicles(), default=lambda car: car.to_dict()),
-        status=200,
-        mimetype='application/json'
-    )
-    return response
-
-
-@app.route('/get_vehicleinfo/<string:vin>')
-def get_vehicle_info(vin):
-    from_cache = int(request.args.get('from_cache', 0)) == 1
-    response = app.response_class(
-        response=json.dumps(APP.myp.get_vehicle_info(vin, from_cache).to_dict(), default=str),
-        status=200,
-        mimetype='application/json'
-    )
-    return response
-
-
-STYLE_CACHE = None
-
-
-@app.route("/style.json")
-def get_style():
-    global STYLE_CACHE
-    if not STYLE_CACHE:
-        with open(app.root_path + "/assets/style.json", "r", encoding="utf-8") as f:
-            res = json.loads(f.read())
-            STYLE_CACHE = res
-    url_root = request.url_root
-    STYLE_CACHE["sprite"] = url_root + "assets/sprites/osm-liberty"
-    return jsonify(STYLE_CACHE)
-
-
-@app.route('/charge_now/<string:vin>/<int:charge>')
-def charge_now(vin, charge):
-    return jsonify(APP.myp.remote_client.charge_now(vin, charge != 0))
-
-
-@app.route('/charge_hour')
-def change_charge_hour():
-    return jsonify(APP.myp.remote_client.change_charge_hour(request.args['vin'],
-                                                            request.args['hour'],
-                                                            request.args['minute']))
-
-
-@app.route('/wakeup/<string:vin>')
-def wakeup(vin):
-    try:
-        return jsonify(APP.myp.remote_client.wakeup(vin))
-    except RateLimitException:
-        return jsonify({"error": "Wakeup rate limit exceeded"})
-
-
-@app.route('/preconditioning/<string:vin>/<int:activate>')
-def preconditioning(vin, activate):
-    return jsonify(APP.myp.remote_client.preconditioning(vin, activate))
-
-
-@app.route('/position/<string:vin>')
-def get_position(vin):
-    res = APP.myp.get_vehicle_info(vin)
-    try:
-        coordinates = res.last_position.geometry.coordinates
-    except AttributeError:
-        return jsonify({'error': 'last_position not available from api'})
-    longitude, latitude = coordinates[:2]
-    if len(coordinates) == 3:  # altitude is not always available
-        altitude = coordinates[2]
-    else:
-        altitude = None
-    return jsonify(
-        {"longitude": longitude, "latitude": latitude, "altitude": altitude,
-         "url": f"https://maps.google.com/maps?q={latitude},{longitude}"})
-
-
-# Set a battery threshold and schedule an hour to stop the charge
-@app.route('/charge_control')
-def get_charge_control():
-    logger.info(request)
-    vin = request.args['vin']
-    charge_control = APP.chc.get(vin)
-    if charge_control is None:
-        return jsonify("error: VIN not in list")
-    if 'hour' in request.args and 'minute' in request.args:
-        charge_control.set_stop_hour([int(request.args["hour"]), int(request.args["minute"])])
-    if 'percentage' in request.args:
-        charge_control.percentage_threshold = int(request.args['percentage'])
-    APP.chc.save_config()
-    return jsonify(charge_control.get_dict())
-
-
-@app.route('/positions')
-def get_recorded_position():
-    return FlaskResponse(Database.get_recorded_position(), mimetype='application/json')
-
-
-@app.route('/abrp')
-def abrp():
-    vin = request.args.get('vin', None)
-    enable = request.args.get('enable', None)
-    token = request.args.get('token', None)
-    if vin is not None and enable is not None:
-        if enable == '1':
-            APP.myp.abrp.abrp_enable_vin.add(vin)
-        else:
-            APP.myp.abrp.abrp_enable_vin.discard(vin)
-    if token is not None:
-        APP.myp.abrp.token = token
-    return jsonify(dict(APP.myp.abrp))
-
-
-@app.after_request
-def after_request(response):
-    header = response.headers
-    header['Access-Control-Allow-Origin'] = '*'
-    return response
-
-@app.route('/horn/<string:vin>/<int:count>')
-def horn(vin, count):
-    try:
-        return jsonify(APP.myp.remote_client.horn(vin, count))
-    except RateLimitException:
-        return jsonify({"error": "Horn rate limit exceeded"})
-
-@app.route('/lights/<string:vin>/<int:duration>')
-def lights(vin, duration):
-    try:
-        return jsonify(APP.myp.remote_client.lights(vin, duration))
-    except RateLimitException:
-        return jsonify({"error": "Lights rate limit exceeded"})
-        
-@app.route('/lock_door/<string:vin>/<int:lock>')
-def lock_door(vin, lock):
-    try:
-        return jsonify(APP.myp.remote_client.lock_door(vin, lock))
-    except RateLimitException:
-        return jsonify({"error": "Locks rate limit exceeded"})
-        
 def update_trips():
     global trips, chargings, cached_layout, min_date, max_date, min_millis, max_millis, step, marks
     logger.info("update_data")
@@ -409,75 +268,75 @@ def serve_layout():
                     dbc.Tab(label="Summary", tab_id="summary", children=summary_tab),
                     dbc.Tab(label="Trips", tab_id="trips", id="tab_trips",
                             children=[dbc.Row(
-                                        dbc.Col([
-                                            dcc.Loading(
-                                                id="loading-div-trips",
-                                                children=[html.Div([html.Div(id="loading-output-trips")])],
-                                                type="circle",
-                                                className="export-load-anim"
-                                            ),
-                                            dbc.Button("Export trips data",
-                                                       id="export-trips-table",
-                                                       n_clicks=0,
-                                                       size="sm",
-                                                       color="light",
-                                                       className="m-1 w-200"
-                                            )],
-                                            className="d-grid gap-2 d-md-flex justify-content-md-end"
-                                        )
-                                      ),
-                                      html.Div(id="tab_trips_fig", children=figures.table_fig),
-                                      dbc.Modal(
-                                          [
-                                              dbc.ModalHeader("Altitude"),
-                                              dbc.ModalBody(html.Div(
+                                dbc.Col([
+                                    dcc.Loading(
+                                        id="loading-div-trips",
+                                        children=[html.Div([html.Div(id="loading-output-trips")])],
+                                        type="circle",
+                                        className="export-load-anim"
+                                    ),
+                                    dbc.Button("Export trips data",
+                                               id="export-trips-table",
+                                               n_clicks=0,
+                                               size="sm",
+                                               color="light",
+                                               className="m-1 w-200"
+                                               )],
+                                    className="d-grid gap-2 d-md-flex justify-content-md-end"
+                                )
+                            ),
+                                html.Div(id="tab_trips_fig", children=figures.table_fig),
+                                dbc.Modal(
+                                [
+                                    dbc.ModalHeader("Altitude"),
+                                    dbc.ModalBody(html.Div(
                                                   id="tab_trips_popup_graph")),
-                                              dbc.ModalFooter(
-                                                  dbc.Button("Close",
-                                                             id="tab_trips_popup-close",
-                                                             className="ml-auto")
-                                              ),
-                                          ],
-                                          id="tab_trips_popup",
-                                          size="xl",
+                                    dbc.ModalFooter(
+                                        dbc.Button("Close",
+                                                   id="tab_trips_popup-close",
+                                                   className="ml-auto")
+                                    ),
+                                ],
+                                id="tab_trips_popup",
+                                size="xl",
                             )
                             ]),
                     dbc.Tab(label="Charge", tab_id="charge", id="tab_charge",
                             children=[dbc.Row(
-                                        dbc.Col([
-                                            dcc.Loading(
-                                                id="loading-div-battery",
-                                                children=[html.Div([html.Div(id="loading-output-battery")])],
-                                                type="circle",
-                                                className="export-load-anim"
-                                            ),
-                                            dbc.Button("Export charging data",
-                                                       id="export-battery-table",
-                                                       n_clicks=0,
-                                                       size="sm",
-                                                       color="light",
-                                                       className="m-1 w-200"
-                                            )],
-                                            className="d-grid gap-2 d-md-flex justify-content-md-end"
-                                        )
-                                      ),
-                                      figures.battery_table,
-                                      dbc.Modal(
-                                          [
-                                              dbc.ModalHeader(
-                                                  "Charging speed"),
-                                              dbc.ModalBody(html.Div(
+                                dbc.Col([
+                                    dcc.Loading(
+                                        id="loading-div-battery",
+                                        children=[html.Div([html.Div(id="loading-output-battery")])],
+                                        type="circle",
+                                        className="export-load-anim"
+                                    ),
+                                    dbc.Button("Export charging data",
+                                               id="export-battery-table",
+                                               n_clicks=0,
+                                               size="sm",
+                                               color="light",
+                                               className="m-1 w-200"
+                                               )],
+                                    className="d-grid gap-2 d-md-flex justify-content-md-end"
+                                )
+                            ),
+                                figures.battery_table,
+                                dbc.Modal(
+                                [
+                                    dbc.ModalHeader(
+                                        "Charging speed"),
+                                    dbc.ModalBody(html.Div(
                                                   id="tab_battery_popup_graph")),
-                                              dbc.ModalFooter(
-                                                  dbc.Button("Close",
-                                                             id="tab_battery_popup-close",
-                                                             className="ml-auto")
-                                              ),
-                                          ],
-                                          id="tab_battery_popup",
-                                          size="xl",
-                                      )
-                                      ]),
+                                    dbc.ModalFooter(
+                                        dbc.Button("Close",
+                                                   id="tab_battery_popup-close",
+                                                   className="ml-auto")
+                                    ),
+                                ],
+                                id="tab_battery_popup",
+                                size="xl",
+                            )
+                            ]),
                     dbc.Tab(label="Map", tab_id="map", children=[maps]),
                     dbc.Tab(label="Control", tab_id="control", children=html.Iframe(
                         src=request.url_root + "control?header=false",

@@ -62,3 +62,10 @@ One of the following parameter is incorrect:
 - email
 - password
 - country code
+### 9. NEED_AUTHORIZATION error:
+Don't open an issue, possible fix:
+- wait for next day
+- https://github.com/flobz/psa_car_controller/issues/395#issuecomment-1690043727
+- https://github.com/flobz/psa_car_controller/issues/576#issuecomment-1631962500
+### 10. No car position:
+Look at this solution: https://github.com/flobz/psa_car_controller/issues/714#issuecomment-1868959995

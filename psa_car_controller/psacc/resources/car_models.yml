@@ -42,6 +42,14 @@
   max_elec_consumption: 70
   max_fuel_consumption: 0
 - !ElecModel
+  name: e2008 Facelift 2023+
+  battery_power: 50
+  fuel_capacity: 0
+  abrp_name:
+  reg: VR3UKZKW.*
+  max_elec_consumption: 70
+  max_fuel_consumption: 0
+- !ElecModel
   name: e-Spacetourer
   battery_power: 46
   fuel_capacity: 0
@@ -414,6 +422,14 @@
   max_elec_consumption: 70
   max_fuel_consumption: 30
 - !CarModel
+  name: SUV 3008 Hybrid4 300
+  battery_power: 13.2
+  fuel_capacity: 43
+  abrp_name:
+  reg: VF3M45GBUM.*
+  max_elec_consumption: 70
+  max_fuel_consumption: 30
+- !CarModel
   name: 508 PSE
   battery_power: 11.5
   fuel_capacity: 43
@@ -500,4 +516,12 @@
   abrp_name:
   reg: VR3ECYHYCK.*
   max_elec_consumption: 0
+  max_fuel_consumption: 30
+- !CarModel
+  name: SUV 3008 II 2021
+  battery_power: 0
+  fuel_capacity: 53
+  abrp_name:
+  reg: VF3M45GFUL.*
+  max_elec_consumption: 70
   max_fuel_consumption: 30
