@@ -8,7 +8,8 @@ RUN  BUILD_DEP='python3-pip python3-setuptools python3-dev libblas-dev liblapack
      apt-get update && apt-get install -y --no-install-recommends $BUILD_DEP $PYTHON_DEP;
 RUN pip3 install --upgrade pip build poetry
 ADD ./ .
-RUN python3 -m build
+#RUN python3 -m build
+RUN poetry build
 RUN pip3 install --no-cache-dir dist/psa_car_controller-${PSACC_VERSION}-py3-none-any.whl
 EXPOSE 5000
 
